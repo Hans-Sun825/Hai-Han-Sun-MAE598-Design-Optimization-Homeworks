@@ -8,6 +8,7 @@ Is this a convex problem?
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import minimize
 
 ### Define the objective function and its gradient
 # x[0] = x_1, x[1] = x_2, x[2] = x_3
@@ -26,13 +27,13 @@ def constraint_gradient(x):
     return np.array([1, 2, 3])
 
 # Define the necessary parameters
-X0 = np.array([10.0, 10.0, -10.0])      # X0 : Initial point
+X0 = np.array([10.0, 10.0, -10.0])  # X0 : Initial point
 alpha = 0.1                         # alpha : learning rate
-num_iterations = 50                 
+num_iterations = 50                 # num_iterations : k
 epsilon = 0.0001                    # Stopping criteria is abs(f(x)) < epsilon.
 
 # Define the gradient descent
-def gradient_descent(alpha, num_iterations):
+def gradient_descent(alpha, num_iterations, epsilon):
     x = np.array([0.0, 0.0, 0.0])  # Initial point
     storage = []  # To store objective values for convergence plot
 
@@ -40,7 +41,8 @@ def gradient_descent(alpha, num_iterations):
         gradient_x = gradient(x)
         x = x - alpha * gradient_x
         storage.append(objective(x))
-
+        if len(gradient_x)**2 < epsilon:
+            break
     return x, storage
 
 # Define the Newton's algorithm
@@ -49,8 +51,8 @@ def newton_method(num_iterations):
     storage = []  # To store objective values for convergence plot
 
     for i in range(num_iterations):
-        gradient_x = constraint_gradient(x)
-        
+        gradient_x = gradient(x)
+        constraint_gradient_x = constraint_gradient(x)
         # Update x using Newton's method
         x = x - gradient_x.T * gradient_x
         storage.append(objective(x))
@@ -61,7 +63,7 @@ def newton_method(num_iterations):
 
 # Gradient Descent
 for initial_point in X0:
-    x_gd, storage_gd = gradient_descent(alpha, num_iterations)
+    x_gd, storage_gd = gradient_descent(alpha, num_iterations, epsilon)
     print(f"Gradient Descent: Initial Point = {initial_point}, Solution = {x_gd}")
 # Newton's Algorithm
 for initial_point in X0:
