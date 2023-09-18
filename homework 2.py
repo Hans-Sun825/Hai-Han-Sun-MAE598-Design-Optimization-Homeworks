@@ -11,30 +11,34 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 ### Define the objective function and its gradient
-# x[0] = x_1, x[1] = x_2, x[2] = x_3
+# x[0] = x_2, x[1] = x_3
+# x_1 = 1 - 2*x_2 - 3*x_3
 def objective(x):
-    return ((x[0])**2 + x[1]**2 + (x[2] - 1)**2)**0.5
+    return ((2 - 2*x[0] -3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**0.5
+
+"""
+>>> a = numpy.array([1, 2, 3, 4], dtype=numpy.float64)
+>>> a
+array([ 1.,  2.,  3.,  4.])
+>>> a.astype(numpy.int64)
+array([1, 2, 3, 4])
+"""
 
 def gradient(x):
-    return np.array([2 * (x[0] + 1), 2 * x[1], 2 * (x[2] - 1)])
-
-# Define the constraint
-def constraint(x):
-    return x[0] + 2 * x[1] + 3 * x[2] - 1
-
-# Define the gradient constraint
-def constraint_gradient(x):
-    return np.array([1, 2, 3])
+    a = np.array([0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1]-1)**2)**-0.5 * (2 * (2 - 2*x[0] - 3*x[1]) * (-2) + 2*x[0]),
+    0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1]-1)**2)**-0.5 * (2 * (2 - 2*x[0] - 3*x[1]) * (-3) + 2 * (x[1]-1))])
+    a_int = a.astype(int)
+    return np.array(a_int)
 
 # Define the necessary parameters
-X0 = np.array([10.0, 10.0, -10.0])  # X0 : Initial point
-alpha = 0.1                         # alpha : learning rate
-num_iterations = 50                 # num_iterations : k
+X0 = np.array([0.0, 0.0])  # X0 : Initial point
+alpha = 0.001                         # alpha : learning rate
+num_iterations = 500                 # num_iterations : k
 epsilon = 0.0001                    # Stopping criteria is abs(f(x)) < epsilon.
 
 # Define the gradient descent
 def gradient_descent(alpha, num_iterations, epsilon):
-    x = np.array([0.0, 0.0, 0.0])  # Initial point
+    x = np.array([0.0, 0.0])  # Initial point
     storage = []  # To store objective values for convergence plot
 
     for i in range(num_iterations):
@@ -47,16 +51,15 @@ def gradient_descent(alpha, num_iterations, epsilon):
 
 # Define the Newton's algorithm
 def newton_method(num_iterations):
-    x = np.array([0.0, 0.0, 0.0])  # Initial point
+    x = np.array([0.0, 0.0])  # Initial point
     storage = []  # To store objective values for convergence plot
 
     for i in range(num_iterations):
         gradient_x = gradient(x)
-        constraint_gradient_x = constraint_gradient(x)
+
         # Update x using Newton's method
         x = x - gradient_x.T * gradient_x
         storage.append(objective(x))
-
     return x, storage
 
 ### Import initial guesses and show the results
@@ -76,7 +79,7 @@ plt.plot(range(num_iterations), storage_gd, label="Gradient Descent", linestyle=
 plt.plot(range(num_iterations), stroage_newton, label="Newton's Method", linestyle='-')
 plt.xlabel("Iterations")
 plt.ylabel("Objective Value")
-plt.yscale('log')
+plt.yscale("log")
 plt.legend()
 plt.title("Convergence Plot")
 plt.show()
