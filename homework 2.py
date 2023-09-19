@@ -32,13 +32,16 @@ def gradient(x):
     a_int = a.T.astype(int)
     return np.array(a_int)
 
-def hessian(x):
+def gradient_zero(x):
+    return([-1.789, -3.130])
+
+def hessian_zero(x):
     return([0.805, -5.635], 
            [-5.635, 0.089])
 
 # Define the necessary parameters
 X0 = np.array([0.0, 0.0])           # X0 : Initial point
-alpha = 1                           # alpha : learning rate
+alpha = 0.5                         # alpha : learning rate
 num_iterations = 500                # num_iterations : k
 epsilon = 0.0001                    # Stopping criteria is abs(f(x)) < epsilon.
 
@@ -63,11 +66,11 @@ def newton_method(num_iterations,alpha, epsilon):
     storage = []                    # To store objective values for convergence plot
 
     for i in range(num_iterations):
-        gradient_x = gradient(x)
-        hessian_x = hessian(x)
+        gradient_zero_x = np.transpose(gradient_zero(x))
+        hessian_zero_x = hessian_zero(x)
         # Update x using Newton's method
-        x = x - alpha * np.linalg.inv(hessian_x) * gradient_x
-        if len(gradient_x) < epsilon:
+        x = x - alpha * np.linalg.inv(hessian_zero_x) * gradient_zero_x
+        if len(gradient_zero_x) < epsilon:
             break
         else:
             x = x + 1
