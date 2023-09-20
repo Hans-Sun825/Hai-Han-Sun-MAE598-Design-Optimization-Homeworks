@@ -27,23 +27,29 @@ array([1, 2, 3, 4])
 """
 
 def gradient(x):
-    a = np.array([0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1]-1)**2)**-0.5 * (2 * (2 - 2*x[0] - 3*x[1]) * (-2) + 2*x[0]),
+    g = np.array([0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1]-1)**2)**-0.5 * (2 * (2 - 2*x[0] - 3*x[1]) * (-2) + 2*x[0]),
     0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1]-1)**2)**-0.5 * (2 * (2 - 2*x[0] - 3*x[1]) * (-3) + 2 * (x[1]-1))])
-    a_int = a.T.astype(int)
-    return np.array(a_int)
+    return np.array(g)
 
-def gradient_zero(x):
-    return([-1.789, -3.130])
+def hessian(x):
+    h = np.array([[-0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-4 * (2 - 2*x[0] - 3*x[1] + 2*x[0]))**2 + 5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-0.5,
+        -0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2 * (x[1] - 1) * (-4 * (2 - 2*x[0] - 3*x[1]) + 2*x[0])) + (0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2))**-0.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2*(x[1] - 1))], 
+        [-0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2 * (x[1] - 1) * (-4 * (2 - 2*x[0] - 3*x[1]) + 2*x[0])) + (0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2))**-0.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2*(x[1] - 1)),
+        -0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2 * (x[1] - 1))**2 + 10 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-0.5]])
+    return np.array(h)
+#def gradient_zero(x):
+    return np.transpose([-1.789, -3.130])
 
-def hessian_zero(x):
+#def hessian_zero(x):
     return([0.805, -5.635], 
-           [-5.635, 0.089])
+            [-5.635, 0.089])
 
 # Define the necessary parameters
 X0 = np.array([0.0, 0.0])           # X0 : Initial point
-alpha = 0.5                         # alpha : learning rate
-num_iterations = 500                # num_iterations : k
-epsilon = 0.0001                    # Stopping criteria is abs(f(x)) < epsilon.
+alpha = line_search(f = objective, myfprime = gradient, 
+                    xk = np.array([1.0, 1.0]), pk = np.array([-0.1, -0.1])) # alpha : learning rate
+num_iterations = 5                  # num_iterations : k
+epsilon = 0.001                     # Stopping criteria is abs(f(x)) < epsilon.
 
 # Define the gradient descent
 def gradient_descent(alpha, num_iterations, epsilon):
@@ -52,28 +58,30 @@ def gradient_descent(alpha, num_iterations, epsilon):
 
     for i in range(num_iterations):
         gradient_x = gradient(x)
-        x = x - alpha * gradient_x
-        storage.append(objective(x))
-        if len(gradient_x)**2 < epsilon:
+        x = x - np.dot(alpha[i], gradient_x)
+
+        if np.linalg.norm(gradient_x)**2 < epsilon:
             break
         else:
-            x = x + 1
+            i = i + 1
+        storage.append(objective(x))
     return x, storage
 
 # Define the Newton's algorithm
-def newton_method(num_iterations,alpha, epsilon):
+def newton_method(num_iterations, alpha, epsilon):
     x = np.array([0.0, 0.0])        # Initial point
     storage = []                    # To store objective values for convergence plot
 
     for i in range(num_iterations):
-        gradient_zero_x = np.transpose(gradient_zero(x))
-        hessian_zero_x = hessian_zero(x)
+        gradient_x = gradient(x)
+        hessian_x = hessian(x)
         # Update x using Newton's method
-        x = x - alpha * np.linalg.inv(hessian_zero_x) * gradient_zero_x
-        if len(gradient_zero_x) < epsilon:
+        x = x - alpha[i] * np.dot(np.linalg.inv(hessian_x), gradient_x)
+        
+        if np.linalg.norm(gradient_x) < epsilon:
             break
         else:
-            x = x + 1
+            i = i + 1
         storage.append(objective(x))
     return x, storage
 
@@ -85,7 +93,7 @@ for initial_point in X0:
     print(f"Gradient Descent: Initial Point = {initial_point}, Solution = {x_gd}")
 # Newton's Algorithm
 for initial_point in X0:
-    x_newton, stroage_newton = newton_method(num_iterations,alpha, epsilon)
+    x_newton, stroage_newton = newton_method(num_iterations, alpha, epsilon)
     print(f"Newton's Method: Initial Point = {initial_point}, Solution = {x_newton}")
 
 # Plot convergence
@@ -98,3 +106,11 @@ plt.yscale("log")
 plt.legend()
 plt.title("Convergence Plot")
 plt.show()
+
+"""
+Result:
+Gradient Descent: Initial Point = 0.0, Solution = [-3.80036949 -4.51742044]
+Gradient Descent: Initial Point = 0.0, Solution = [-3.80036949 -4.51742044]
+Newton's Method: Initial Point = 0.0, Solution = [-5.43768716 -3.81062982]
+Newton's Method: Initial Point = 0.0, Solution = [-5.43768716 -3.81062982]
+"""
