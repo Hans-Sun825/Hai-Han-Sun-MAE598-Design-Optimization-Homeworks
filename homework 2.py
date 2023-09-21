@@ -36,7 +36,8 @@ def hessian(x):
         -0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2 * (x[1] - 1) * (-4 * (2 - 2*x[0] - 3*x[1]) + 2*x[0])) + (0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2))**-0.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2*(x[1] - 1))], 
         [-0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2 * (x[1] - 1) * (-4 * (2 - 2*x[0] - 3*x[1]) + 2*x[0])) + (0.5 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2))**-0.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2*(x[1] - 1)),
         -0.25 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-1.5 * (-6 * (2 - 2*x[0] - 3*x[1]) + 2 * (x[1] - 1))**2 + 10 * ((2 - 2*x[0] - 3*x[1])**2 + x[0]**2 + (x[1] - 1)**2)**-0.5]])
-    return np.array(h)
+    h_inv = np.linalg.inv(np.matrix(h))
+    return np.array(h_inv)
 #def gradient_zero(x):
     return np.transpose([-1.789, -3.130])
 
@@ -45,7 +46,7 @@ def hessian(x):
             [-5.635, 0.089])
 
 # Define the necessary parameters
-X0 = np.array([0.0, 0.0])           # X0 : Initial point
+X0 = np.array([[0.0], [0.0]])           # X0 : Initial point
 alpha = line_search(f = objective, myfprime = gradient, 
                     xk = np.array([1.0, 1.0]), pk = np.array([-0.1, -0.1])) # alpha : learning rate
 num_iterations = 5                  # num_iterations : k
@@ -53,7 +54,7 @@ epsilon = 0.001                     # Stopping criteria is abs(f(x)) < epsilon.
 
 # Define the gradient descent
 def gradient_descent(alpha, num_iterations, epsilon):
-    x = np.array([0.0, 0.0])        # Initial point
+    x = np.array([[0.0], [0.0]])         # Initial point
     storage = []                    # To store objective values for convergence plot
 
     for i in range(num_iterations):
@@ -69,14 +70,14 @@ def gradient_descent(alpha, num_iterations, epsilon):
 
 # Define the Newton's algorithm
 def newton_method(num_iterations, alpha, epsilon):
-    x = np.array([0.0, 0.0])        # Initial point
+    x = np.array([[0.0], [0.0]])        # Initial point
     storage = []                    # To store objective values for convergence plot
 
     for i in range(num_iterations):
         gradient_x = gradient(x)
         hessian_x = hessian(x)
         # Update x using Newton's method
-        x = x - alpha[i] * np.dot(np.linalg.inv(hessian_x), gradient_x)
+        x = x - alpha[i] * np.dot(hessian_x, gradient_x)
         
         if np.linalg.norm(gradient_x) < epsilon:
             break
@@ -109,8 +110,12 @@ plt.show()
 
 """
 Result:
-Gradient Descent: Initial Point = 0.0, Solution = [-3.80036949 -4.51742044]
-Gradient Descent: Initial Point = 0.0, Solution = [-3.80036949 -4.51742044]
-Newton's Method: Initial Point = 0.0, Solution = [-5.43768716 -3.81062982]
-Newton's Method: Initial Point = 0.0, Solution = [-5.43768716 -3.81062982]
+Gradient Descent: Initial Point = [0.], Solution = [[-3.80036949]
+ [-4.51742044]]
+Gradient Descent: Initial Point = [0.], Solution = [[-3.80036949]
+ [-4.51742044]]
+Newton's Method: Initial Point = [0.], Solution = [[-5.43768716]
+ [-3.81062982]]
+Newton's Method: Initial Point = [0.], Solution = [[-5.43768716]
+ [-3.81062982]]
 """
