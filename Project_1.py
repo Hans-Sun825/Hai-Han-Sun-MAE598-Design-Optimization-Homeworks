@@ -26,11 +26,12 @@ logger = logging.getLogger(__name__)
 
 # environment parameters
 FRAME_TIME = 0.1  # time interval
-GRAVITY_ACCEL_Y = 0.1  # gravity constant in Y direction
+GRAVITY_ACCEL_Y = 0.005  # gravity constant in Y direction 
 GRAVITY_ACCEL_X = 0.1  # gravity constant in X direction
-BOOST_ACCEL = 0.2  # thrust constant
-OMEGA_RATE = -0.1  # max rotation rate 
-L = 10  # wheelbase
+BOOST_ACCEL = 0.1  # thrust constant
+delta = 60 # sttering angle
+L = 0.5  # wheelbase
+OMEGA_RATE = math.tan(delta)/L  # max rotation rate 
 
 class Dynamics(nn.Module):
 
@@ -54,29 +55,29 @@ class Dynamics(nn.Module):
         # Normally, we would do x[1] = x[1] + gravity * delta_time
         # but this is not allowed in PyTorch since it overwrites one variable (x[1]) that is part of the computational graph to be differentiated.
         # Therefore, I define a tensor dx = [0., gravity * delta_time], and do x = x + dx. This is allowed.
-
+        
         delta_state_gravity = torch.tensor([[0., 0.,-GRAVITY_ACCEL_X * FRAME_TIME, -GRAVITY_ACCEL_Y * FRAME_TIME, 0.]])
 
         state_tensor = torch.zeros((1, 5))              # 1 by 5 matrix with 0
         state_tensor[0, 3] = torch.cos(state[0, 4] + 90)    # cos(input)
         state_tensor[0, 2] = torch.sin(state[0, 4] + 90)    # sin(input)
-        state_tensor[0, 4] = torch.tan(state[0, 4])    # tan(input)
-        Tan_wheel = state_tensor[0, 4]/L
+        state_tensor[0, 4] = (state[0, 4]) * OMEGA_RATE     
 
+        # 
         delta_state = BOOST_ACCEL * FRAME_TIME * torch.mul(state_tensor, action[0, 0].reshape(-1, 1))       # multiple state_tensor & action & transpose
+        #delta_state_theta = [0, 0, 0, 0, OMEGA_RATE * BOOST_ACCEL]
+        #delta_state = np.matrix.sum(delta_state, delta_state_theta)
+        #delta_state[:, 4] = BOOST_ACCEL * torch.mul(state_tensor[0, 4], OMEGA_RATE.reshape(-1, 1))
 
-        
         # Theta
-        Mult_1 = torch.mul(torch.tensor([0., 0., 0., 0, 1.]), action[0, 1].reshape(-1, 1))
-        Mult_2 = torch.mul(Mult_1, Tan_wheel.reshape(-1, 1))
-        delta_state_theta = FRAME_TIME * OMEGA_RATE * Mult_2
+        delta_state_theta = BOOST_ACCEL * FRAME_TIME * OMEGA_RATE * torch.mul(torch.tensor([0., 0., 0., 0, 1.]),action[0, 1].reshape(-1, 1))
 
         # Update state
         step_mat = torch.tensor([[1., 0.,FRAME_TIME, 0., 0.],
                                  [0., 1., 0., FRAME_TIME, 0.],
                                  [0., 0., 1., 0., 0.],
                                  [0., 0., 0., 1., 0.],
-                                 [0., 0., 0., 0., Tan_wheel]])
+                                 [0., 0., 0., 0., 1.]])
         
         shift_mat = torch.tensor([[0., 0.,FRAME_TIME, 0., 0.],
                                  [0., 0., 0., FRAME_TIME, 0.],
@@ -84,7 +85,7 @@ class Dynamics(nn.Module):
                                  [0., 0., 0., 0., 0.],
                                  [0., 0., 0., 0., 0.]])
 
-        state = torch.matmul(step_mat, state.T) + torch.matmul(shift_mat, delta_state.T)  * 0.5 + torch.matmul(shift_mat, delta_state_gravity.T)  * 0.5
+        state = torch.matmul(step_mat, state.T) + torch.matmul(shift_mat, delta_state.T) * 0.5 + torch.matmul(shift_mat, delta_state_gravity.T) * 0.5 
         state = state.T
 
         state = state + delta_state  + delta_state_gravity + delta_state_theta
