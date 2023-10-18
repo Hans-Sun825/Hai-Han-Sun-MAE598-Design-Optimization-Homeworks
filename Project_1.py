@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 # environment parameters
 FRAME_TIME = 0.1  # time interval
-GRAVITY_ACCEL_Y = 0.005  # gravity constant in Y direction 
-GRAVITY_ACCEL_X = 0.1  # gravity constant in X direction
+BACKWARD_ACCEL_Y = 0.005  # backward constant in Y direction 
+BACKWARD_ACCEL_X = 0.1  # backward constant in X direction
 BOOST_ACCEL = 0.1  # thrust constant
-delta = 60 # sttering angle
+delta = 60 # steering angle
 L = 0.5  # wheelbase
 OMEGA_RATE = math.tan(delta)/L  # max rotation rate 
 
@@ -56,7 +56,7 @@ class Dynamics(nn.Module):
         # but this is not allowed in PyTorch since it overwrites one variable (x[1]) that is part of the computational graph to be differentiated.
         # Therefore, I define a tensor dx = [0., gravity * delta_time], and do x = x + dx. This is allowed.
         
-        delta_state_gravity = torch.tensor([[0., 0.,-GRAVITY_ACCEL_X * FRAME_TIME, -GRAVITY_ACCEL_Y * FRAME_TIME, 0.]])
+        delta_state_gravity = torch.tensor([[0., 0.,-BACKWARD_ACCEL_X * FRAME_TIME, -BACKWARD_ACCEL_Y * FRAME_TIME, 0.]])
 
         state_tensor = torch.zeros((1, 5))              # 1 by 5 matrix with 0
         state_tensor[0, 3] = torch.cos(state[0, 4] + 90)    # cos(input)
@@ -65,9 +65,6 @@ class Dynamics(nn.Module):
 
         # 
         delta_state = BOOST_ACCEL * FRAME_TIME * torch.mul(state_tensor, action[0, 0].reshape(-1, 1))       # multiple state_tensor & action & transpose
-        #delta_state_theta = [0, 0, 0, 0, OMEGA_RATE * BOOST_ACCEL]
-        #delta_state = np.matrix.sum(delta_state, delta_state_theta)
-        #delta_state[:, 4] = BOOST_ACCEL * torch.mul(state_tensor[0, 4], OMEGA_RATE.reshape(-1, 1))
 
         # Theta
         delta_state_theta = BOOST_ACCEL * FRAME_TIME * OMEGA_RATE * torch.mul(torch.tensor([0., 0., 0., 0, 1.]),action[0, 1].reshape(-1, 1))
@@ -167,7 +164,6 @@ class Optimize:
 
     # Define training method for the model
     
-
     def train(self, epochs):
         # self.optimizer = epoch
         l = np.zeros(epochs)
@@ -292,7 +288,7 @@ class Optimize:
 
         # Save as GIF
         writer = PillowWriter(fps=20)
-        anim.save("rocket_landing1.gif", writer=writer)
+        anim.save("Automatic Parking.gif", writer=writer)
 
 T = 100  # number of time steps of the simulation
 dim_input = 5  # state space dimensions
