@@ -1,4 +1,5 @@
 # Code updated from former student: https://github.com/siddahant/DESOPT/blob/RocketLanding/Rocket_Landing_Optimization.ipynb
+# See the updated from this site: https://github.com/Hans-Sun825/Hai-Han-Sun-MAE598-Design-Optimization-Homeworks
 
 # overhead
 import logging
@@ -141,7 +142,7 @@ class Optimize:
     def __init__(self, simulation):
         self.simulation = simulation # define the objective function
         self.parameters = simulation.controller.parameters()
-        self.optimizer = optim.LBFGS(self.parameters, lr=0.05) # define the opmization algorithm
+        self.optimizer = optim.LBFGS(self.parameters, lr=0.01) # define the opmization algorithm
         self.loss_list = []
 
     # Define loss calculation method for objective function
