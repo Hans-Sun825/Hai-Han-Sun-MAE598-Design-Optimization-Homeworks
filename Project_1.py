@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 FRAME_TIME = 0.1  # time interval
 BACKWARD_ACCEL_Y = 0.005  # backward constant in Y direction 
 BACKWARD_ACCEL_X = 0.1  # backward constant in X direction
-BOOST_ACCEL = 0.1  # thrust constant
+BOOST_ACCEL = 0.1  # boosting constant
 delta = 60 # steering angle
 L = 0.5  # wheelbase
 OMEGA_RATE = math.tan(delta)/L  # max rotation rate 
@@ -40,7 +40,7 @@ class Dynamics(nn.Module):
 
     def forward(self, state, action):
         """
-        action[0] = Thrust
+        action[0] = Boost
         action[1] = theta_dot
 
         state[0] = x
@@ -48,20 +48,14 @@ class Dynamics(nn.Module):
         state[2] = vx
         state[3] = vy
         state[4] = theta
-      
         """
-        # Apply gravity
-        # Note: Here gravity is used to change velocity which is the second element of the state vector
-        # Normally, we would do x[1] = x[1] + gravity * delta_time
-        # but this is not allowed in PyTorch since it overwrites one variable (x[1]) that is part of the computational graph to be differentiated.
-        # Therefore, I define a tensor dx = [0., gravity * delta_time], and do x = x + dx. This is allowed.
         
-        delta_state_gravity = torch.tensor([[0., 0.,-BACKWARD_ACCEL_X * FRAME_TIME, -BACKWARD_ACCEL_Y * FRAME_TIME, 0.]])
+        delta_state_backward = torch.tensor([[0., 0.,-BACKWARD_ACCEL_X * FRAME_TIME, -BACKWARD_ACCEL_Y * FRAME_TIME, 0.]])
 
         state_tensor = torch.zeros((1, 5))              # 1 by 5 matrix with 0
         state_tensor[0, 3] = torch.cos(state[0, 4] + 90)    # cos(input)
         state_tensor[0, 2] = torch.sin(state[0, 4] + 90)    # sin(input)
-        state_tensor[0, 4] = (state[0, 4]) * OMEGA_RATE     
+        state_tensor[0, 4] = (state[0, 4]) * OMEGA_RATE     # theta(input)
 
         # 
         delta_state = BOOST_ACCEL * FRAME_TIME * torch.mul(state_tensor, action[0, 0].reshape(-1, 1))       # multiple state_tensor & action & transpose
@@ -82,10 +76,10 @@ class Dynamics(nn.Module):
                                  [0., 0., 0., 0., 0.],
                                  [0., 0., 0., 0., 0.]])
 
-        state = torch.matmul(step_mat, state.T) + torch.matmul(shift_mat, delta_state.T) * 0.5 + torch.matmul(shift_mat, delta_state_gravity.T) * 0.5 
+        state = torch.matmul(step_mat, state.T) + torch.matmul(shift_mat, delta_state.T) * 0.5 + torch.matmul(shift_mat, delta_state_backward.T) * 0.5 
         state = state.T
 
-        state = state + delta_state  + delta_state_gravity + delta_state_theta
+        state = state + delta_state  + delta_state_backward + delta_state_theta
 
         return state
     
@@ -147,7 +141,7 @@ class Optimize:
     def __init__(self, simulation):
         self.simulation = simulation # define the objective function
         self.parameters = simulation.controller.parameters()
-        self.optimizer = optim.LBFGS(self.parameters, lr=0.01) # define the opmization algorithm
+        self.optimizer = optim.LBFGS(self.parameters, lr=0.05) # define the opmization algorithm
         self.loss_list = []
 
     # Define loss calculation method for objective function
@@ -194,7 +188,7 @@ class Optimize:
         vy = data[:, 3]
         theta = data[:, 4]
         action_data = np.array([self.simulation.action_trajectory[i][0].detach().numpy() for i in range(self.simulation.T)])
-        thrust = action_data[:,0]
+        boost = action_data[:,0]
         frame = range(self.simulation.T)
 
         fig, ax = plt.subplots(1, 4, tight_layout = 1, figsize = (15, 5))
@@ -217,17 +211,17 @@ class Optimize:
         ax[2].legend(frameon=0)
         ax[2].set(title=f'Theta plot at {self.epoch}')
 
-        ax[3].plot(frame, thrust, c = 'y', label = "thrust")
+        ax[3].plot(frame, boost, c = 'y', label = "Boost")
         ax[3].set_xlabel("Time interval")
-        ax[3].set_ylabel("Thrust")
+        ax[3].set_ylabel("Boost")
         ax[3].legend(frameon=0)
-        ax[3].set(title=f'Thrust plot at {self.epoch}')
+        ax[3].set(title=f'Boost plot at {self.epoch}')
         plt.show()
 
     def animation(self, epochs):
               # Size
-        length = 0.10          # m
-        width = 0.02          # m
+        length = 0.3          # m
+        width = 0.3          # m
 
         #
         v_exhaust = 1     
@@ -248,9 +242,9 @@ class Optimize:
         ax1 = fig.add_subplot(111)
         plt.axhline(y=0., color='b', linestyle='--', lw=0.8)
 
-        ln1, = ax1.plot([], [], linewidth = 10, color = 'lightblue') # rocket body
-        ln6, = ax1.plot([], [], '--', linewidth = 2, color = 'orange') # trajectory line
-        ln2, = ax1.plot([], [], linewidth = 4, color = 'tomato') # thrust line
+        ln1, = ax1.plot([], [], linewidth = 20, color = 'lightblue') # Vehicle body
+        ln6, = ax1.plot([], [], '--', linewidth = 2, color = 'orange') # Trajectory line
+        ln2, = ax1.plot([], [], linewidth = 4, color = 'tomato') # Boost line
 
         plt.tight_layout()
 
@@ -259,25 +253,25 @@ class Optimize:
         ax1.set_aspect(1)  # aspect of the axis scaling, i.e. the ratio of y-unit to x-unit
 
         def update(i):
-            rocket_theta = x_t[i, 4]
+            vehicle_theta = x_t[i, 4]
 
-            rocket_x = x_t[i, 0]
+            vehicle_x = x_t[i, 0]
             # length/1 is just to make rocket bigger in animation
-            rocket_x_points = [rocket_x + length/1 * np.sin(rocket_theta), rocket_x - length/1 * np.sin(rocket_theta)]
+            vehicle_x_points = [vehicle_x + length/1 * np.sin(vehicle_theta), vehicle_x - length/1 * np.sin(vehicle_theta)]
 
-            rocket_y = x_t[i, 1]
-            rocket_y_points = [rocket_y + length/1 * np.cos(rocket_theta), rocket_y - length/1 * np.cos(rocket_theta)]
+            vehicle_y = x_t[i, 1]
+            vehicle_y_points = [vehicle_y + length/1 * np.cos(vehicle_theta), vehicle_y - length/1 * np.cos(vehicle_theta)]
 
-            ln1.set_data(rocket_x_points, rocket_y_points)
+            ln1.set_data(vehicle_x_points, vehicle_y_points)
 
-            thrust_mag = u_t[i, 0]
-            thrust_angle = -u_t[i, 1]
+            boost_mag = u_t[i, 0]
+            boost_angle = -u_t[i, 1]
 
-            flame_length = (thrust_mag) * (0.4/v_exhaust)
-            # flame_x_points = [rocket_x_points[1], rocket_x_points[1] + flame_length * np.sin(thrust_angle - rocket_theta)]
-            # flame_y_points = [rocket_y_points[1], rocket_y_points[1] - flame_length * np.cos(thrust_angle - rocket_theta)]
-            flame_x_points = [rocket_x_points[1], rocket_x_points[1] - flame_length * np.sin(rocket_theta)]
-            flame_y_points = [rocket_y_points[1], rocket_y_points[1] - flame_length * np.cos(rocket_theta)]
+            flame_length = (boost_mag) * (0.4/v_exhaust)
+            # flame_x_points = [vehicle_x_points[1], vehicle_x_points[1] + flame_length * np.sin(boost_angle - vehicle_theta)]
+            # flame_y_points = [vehicle_y_points[1], vehicle_y_points[1] - flame_length * np.cos(boost_angle - vehicle_theta)]
+            flame_x_points = [vehicle_x_points[1], vehicle_x_points[1] - flame_length * np.sin(vehicle_theta)]
+            flame_y_points = [vehicle_y_points[1], vehicle_y_points[1] - flame_length * np.cos(vehicle_theta)]
 
             ln2.set_data(flame_x_points, flame_y_points)
             ln6.set_data(x_t[:i, 0], x_t[:i, 1])
