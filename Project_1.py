@@ -1,6 +1,3 @@
-# Code updated from former student: https://github.com/siddahant/DESOPT/blob/RocketLanding/Rocket_Landing_Optimization.ipynb
-# See the updated from this site: https://github.com/Hans-Sun825/Hai-Han-Sun-MAE598-Design-Optimization-Homeworks
-
 # overhead
 import logging
 import math
@@ -31,8 +28,11 @@ BACKWARD_ACCEL_Y = 0.005  # backward constant in Y direction
 BACKWARD_ACCEL_X = 0.1  # backward constant in X direction
 BOOST_ACCEL = 0.1  # boosting constant
 delta = 60 # steering angle
-L = 0.5  # wheelbase
+L = 1.5  # wheelbase
 OMEGA_RATE = math.tan(delta)/L  # max rotation rate 
+cos_value = math.cos(delta)
+Delta_OMEGA_RATE = (1 / L) * (1 / (cos_value ** 2))
+# Oomega_rate = 3.4641
 
 class Dynamics(nn.Module):
 
@@ -62,7 +62,7 @@ class Dynamics(nn.Module):
         delta_state = BOOST_ACCEL * FRAME_TIME * torch.mul(state_tensor, action[0, 0].reshape(-1, 1))       # multiple state_tensor & action & transpose
 
         # Theta
-        delta_state_theta = BOOST_ACCEL * FRAME_TIME * OMEGA_RATE * torch.mul(torch.tensor([0., 0., 0., 0, 1.]),action[0, 1].reshape(-1, 1))
+        delta_state_theta = BOOST_ACCEL * FRAME_TIME * Delta_OMEGA_RATE * torch.mul(torch.tensor([0., 0., 0., 0, 1.]),action[0, 1].reshape(-1, 1))
 
         # Update state
         step_mat = torch.tensor([[1., 0.,FRAME_TIME, 0., 0.],
